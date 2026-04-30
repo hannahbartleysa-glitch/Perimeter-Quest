@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perimeter Quest — Grade 9 Maths Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  #app {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+  }
+
+  .header { text-align: center; margin-bottom: 1.5rem; }
+  .header h1 { font-size: 2rem; font-weight: 900; color: #f8fafc; letter-spacing: -1px; line-height: 1.1; }
+  .header h1 span { color: #38bdf8; }
+  .header p { font-size: 0.9rem; color: #94a3b8; margin-top: 4px; }
+
+  .hud { display: flex; gap: 10px; margin-bottom: 1.25rem; justify-content: center; flex-wrap: wrap; }
+  .hud-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px 18px; text-align: center; min-width: 90px; }
+  .hud-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700; }
+  .hud-card .value { font-family: 'Space Mono', monospace; font-size: 1.4rem; font-weight: 700; color: #f8fafc; line-height: 1.2; }
+  .hud-card.score-card .value { color: #38bdf8; }
+  .hud-card.level-card .value { color: #a78bfa; }
+  .hud-card.lives-card .value { color: #f472b6; }
+  .hud-card.streak-card .value { color: #fb923c; }
+
+  .timer-wrap { background: #1e293b; border-radius: 999px; height: 8px; margin-bottom: 1.25rem; overflow: hidden; border: 1px solid #334155; }
+  #timer-bar { height: 100%; border-radius: 999px; background: #38bdf8; transition: width 0.1s linear, background 0.5s; }
+
+  .stage { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 1.25rem; margin-bottom: 1.25rem; position: relative; min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .question-type { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 12px; align-self: flex-start; }
+  .shape-area { display: flex; align-items: center; justify-content: center; gap: 2rem; flex-wrap: wrap; width: 100%; }
+  canvas#shapeCanvas { border-radius: 8px; display: block; }
+
+  .shape-info { text-align: center; }
+  .shape-name { font-size: 1rem; font-weight: 800; color: #f8fafc; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .formula-badge { display: inline-block; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 6px 14px; font-family: 'Space Mono', monospace; font-size: 0.75rem; color: #a78bfa; margin-bottom: 8px; }
+  .dims-list { font-size: 0.85rem; color: #94a3b8; line-height: 1.8; }
+  .dims-list strong { color: #e2e8f0; font-weight: 700; }
+
+  .question-text { font-size: 1.05rem; font-weight: 700; color: #f8fafc; text-align: center; margin-top: 1rem; line-height: 1.5; }
+  .question-text em { color: #38bdf8; font-style: normal; font-weight: 900; }
+
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
+  .option-btn { background: #1e293b; border: 2px solid #334155; border-radius: 14px; padding: 14px 10px; color: #e2e8f0; font-family: 'Space Mono', monospace; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.15s; text-align: center; }
+  .option-btn:hover { border-color: #38bdf8; color: #38bdf8; transform: translateY(-2px); background: #162032; }
+  .option-btn.correct { border-color: #22c55e; background: #052e16; color: #4ade80; animation: pulse-green 0.4s; }
+  .option-btn.wrong { border-color: #ef4444; background: #2d0a0a; color: #f87171; animation: shake 0.3s; }
+  .option-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+
+  @keyframes pulse-green { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+  .feedback { text-align: center; font-size: 1rem; font-weight: 800; min-height: 28px; margin-bottom: 0.75rem; transition: all 0.2s; }
+  .feedback.correct { color: #4ade80; }
+  .feedback.wrong { color: #f87171; }
+
+  .hint-box { background: #0f172a; border: 1px solid #334155; border-left: 3px solid #a78bfa; border-radius: 10px; padding: 10px 14px; font-size: 0.82rem; color: #94a3b8; margin-bottom: 1rem; display: none; line-height: 1.6; }
+  .hint-box strong { color: #a78bfa; }
+
+  .progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+  .xp-label { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+  .xp-track { flex: 1; background: #0f172a; border-radius: 999px; height: 6px; border: 1px solid #334155; overflow: hidden; }
+  #xp-bar { height: 100%; border-radius: 999px; background: #a78bfa; transition: width 0.4s ease; }
+
+  .controls-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 0.75rem; }
+  .hint-btn { background: transparent; border: 1.5px solid #475569; border-radius: 10px; padding: 8px 18px; color: #94a3b8; font-family: 'Nunito', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+  .hint-btn:hover { border-color: #a78bfa; color: #a78bfa; }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  #splash-screen { text-align: center; padding: 3rem 1rem; }
+  .splash-icon { font-size: 5rem; margin-bottom: 1rem; display: block; }
+  .splash-title { font-size: 2.8rem; font-weight: 900; color: #f8fafc; letter-spacing: -2px; margin-bottom: 6px; }
+  .splash-title span { color: #38bdf8; }
+  .splash-sub { color: #64748b; font-size: 0.95rem; margin-bottom: 2.5rem; }
+  .features { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 2.5rem; }
+  .feature-chip { background: #1e293b; border: 1px solid #334155; border-radius: 999px; padding: 6px 16px; font-size: 0.8rem; font-weight: 700; color: #94a3b8; }
+  .feature-chip span { color: #38bdf8; }
+  .start-btn { background: #38bdf8; color: #0f172a; border: none; border-radius: 14px; padding: 18px 56px; font-family: 'Nunito', sans-serif; font-size: 1.2rem; font-weight: 900; cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px; }
+  .start-btn:hover { background: #7dd3fc; transform: scale(1.04); }
+
+  #gameover-screen { text-align: center; padding: 2rem 1rem; }
+  .go-title { font-size: 2rem; font-weight: 900; color: #f8fafc; margin-bottom: 0.5rem; }
+  .go-score { font-family: 'Space Mono', monospace; font-size: 3.5rem; font-weight: 700; color: #38bdf8; margin: 1rem 0; }
+  .go-stats { display: flex; gap: 12px; justify-content: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .go-stat { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 12px 20px; text-align: center; }
+  .go-stat .gl { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700; }
+  .go-stat .gv { font-size: 1.4rem; font-weight: 800; color: #f8fafc; }
+  .go-msg { color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem; line-height: 1.6; max-width: 400px; margin-left: auto; margin-right: auto; }
+  .replay-btn { background: #38bdf8; color: #0f172a; border: none; border-radius: 14px; padding: 14px 40px; font-family: 'Nunito', sans-serif; font-size: 1rem; font-weight: 900; cursor: pointer; transition: all 0.15s; margin-right: 10px; margin-bottom: 10px; }
+  .replay-btn:hover { background: #7dd3fc; transform: scale(1.04); }
+  .share-btn { background: transparent; color: #94a3b8; border: 1.5px solid #475569; border-radius: 14px; padding: 14px 28px; font-family: 'Nunito', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.15s; margin-bottom: 10px; }
+  .share-btn:hover { border-color: #38bdf8; color: #38bdf8; }
+
+  .badge-strip { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .badge { background: #1e293b; border: 1px solid #334155; border-radius: 999px; padding: 5px 14px; font-size: 0.75rem; font-weight: 700; color: #64748b; }
+  .badge.earned { border-color: #f59e0b; color: #fbbf24; background: #1c1407; }
+
+  .combo-flash { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; font-weight: 900; color: #fb923c; font-family: 'Nunito', sans-serif; pointer-events: none; animation: combo-anim 0.8s ease forwards; z-index: 999; }
+  @keyframes combo-anim { 0%{opacity:1;transform:translate(-50%,-50%) scale(0.8)} 50%{opacity:1;transform:translate(-50%,-60%) scale(1.1)} 100%{opacity:0;transform:translate(-50%,-80%) scale(1)} }
+
+  .how-to { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 1.25rem 1.5rem; margin-top: 2rem; text-align: left; max-width: 480px; margin-left: auto; margin-right: auto; }
+  .how-to h3 { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 1rem; }
+  .how-to ol { padding-left: 1.2rem; color: #94a3b8; font-size: 0.88rem; line-height: 2; }
+  .how-to ol li strong { color: #e2e8f0; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SPLASH -->
+  <div id="splash-screen" class="screen active">
+    <span class="splash-icon">📐</span>
+    <div class="splash-title">Perimeter <span>Quest</span></div>
+    <p class="splash-sub">Grade 9 Maths — Master perimeter through play</p>
+    <div class="features">
+      <div class="feature-chip"><span>5</span> shape types</div>
+      <div class="feature-chip"><span>3</span> difficulty levels</div>
+      <div class="feature-chip">Timed rounds</div>
+      <div class="feature-chip">Streak bonuses</div>
+      <div class="feature-chip">Instant hints</div>
+    </div>
+    <button class="start-btn" onclick="startGame()">Start Playing →</button>
+    <div class="how-to">
+      <h3>How to play</h3>
+      <ol>
+        <li>Look at the shape and its <strong>measurements</strong></li>
+        <li>Calculate the <strong>perimeter</strong> using the formula shown</li>
+        <li>Tap the <strong>correct answer</strong> before time runs out</li>
+        <li>Use <strong>💡 Hint</strong> if you're stuck — but it costs bonus points!</li>
+        <li>Reach <strong>Level 3</strong> to unlock all shape types</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game-screen" class="screen">
+    <div class="header">
+      <h1>Perimeter <span>Quest</span></h1>
+      <p id="level-label">Level 1 — Rectangles &amp; Squares</p>
+    </div>
+
+    <div class="hud">
+      <div class="hud-card score-card"><div class="label">Score</div><div class="value" id="score-val">0</div></div>
+      <div class="hud-card level-card"><div class="label">Level</div><div class="value" id="level-val">1</div></div>
+      <div class="hud-card lives-card"><div class="label">Lives</div><div class="value" id="lives-val">❤️❤️❤️</div></div>
+      <div class="hud-card streak-card"><div class="label">Streak</div><div class="value" id="streak-val">0🔥</div></div>
+    </div>
+
+    <div class="timer-wrap"><div id="timer-bar" style="width:100%"></div></div>
+
+    <div class="progress-row">
+      <span class="xp-label">XP to next level</span>
+      <div class="xp-track"><div id="xp-bar" style="width:0%"></div></div>
+    </div>
+
+    <div class="stage">
+      <div class="question-type" id="q-type-label">FIND THE PERIMETER</div>
+      <div class="shape-area">
+        <canvas id="shapeCanvas" width="200" height="180"></canvas>
+        <div class="shape-info">
+          <div class="shape-name" id="shape-name-label"></div>
+          <div class="formula-badge" id="formula-badge"></div>
+          <div class="dims-list" id="dims-list"></div>
+        </div>
+      </div>
+      <div class="question-text" id="question-text"></div>
+    </div>
+
+    <div class="hint-box" id="hint-box"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="options-grid" id="options-grid"></div>
+
+    <div class="controls-row">
+      <button class="hint-btn" onclick="showHint()">💡 Show Hint</button>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameover-screen" class="screen">
+    <div class="go-title" id="go-title">Game Over!</div>
+    <div class="go-score" id="go-score-val">0</div>
+    <p style="color:#64748b;font-size:0.85rem;margin-bottom:1rem;">FINAL SCORE</p>
+    <div class="go-stats">
+      <div class="go-stat"><div class="gl">Level Reached</div><div class="gv" id="go-level">1</div></div>
+      <div class="go-stat"><div class="gl">Correct</div><div class="gv" id="go-correct">0</div></div>
+      <div class="go-stat"><div class="gl">Best Streak</div><div class="gv" id="go-streak">0</div></div>
+    </div>
+    <div class="badge-strip" id="badge-strip"></div>
+    <p class="go-msg" id="go-msg"></p>
+    <button class="replay-btn" onclick="startGame()">Play Again</button>
+    <button class="share-btn" onclick="shareGame()">📋 Copy Link to Share</button>
+  </div>
+
+</div>
+
+<script>
+const SHAPES = [
+  {
+    name: 'Rectangle', formula: 'P = 2(l + w)', color: '#38bdf8', level: 1,
+    gen: () => { const l=rand(3,14),w=rand(2,10); return {dims:{l,w},answer:2*(l+w),dimsText:[{k:'Length (l)',v:l},{k:'Width (w)',v:w}]}; },
+    hint: (d) => `Add length and width, then multiply by 2. P = 2 × (${d.l} + ${d.w}) = 2 × ${d.l+d.w} = ${2*(d.l+d.w)} units`,
+    draw: (ctx,d) => {
+      ctx.fillStyle='#1a2e42'; ctx.fillRect(25,40,150,100);
+      ctx.strokeStyle='#38bdf8'; ctx.lineWidth=3; ctx.strokeRect(25,40,150,100);
+      label(ctx,100,28,d.l+'','#38bdf8'); label(ctx,185,90,d.w+'','#38bdf8');
+    }
+  },
+  {
+    name: 'Square', formula: 'P = 4s', color: '#a78bfa', level: 1,
+    gen: () => { const s=rand(3,14); return {dims:{s},answer:4*s,dimsText:[{k:'Side (s)',v:s}]}; },
+    hint: (d) => `All 4 sides are equal! P = 4 × ${d.s} = ${4*d.s} units`,
+    draw: (ctx,d) => {
+      ctx.fillStyle='#1f1542'; ctx.fillRect(40,30,120,120);
+      ctx.strokeStyle='#a78bfa'; ctx.lineWidth=3; ctx.strokeRect(40,30,120,120);
+      label(ctx,100,18,d.s+'','#a78bfa'); label(ctx,172,90,d.s+'','#a78bfa');
+    }
+  },
+  {
+    name: 'Triangle', formula: 'P = a + b + c', color: '#4ade80', level: 2,
+    gen: () => { const a=rand(3,12),b=rand(3,12),c=rand(3,12); return {dims:{a,b,c},answer:a+b+c,dimsText:[{k:'Side a',v:a},{k:'Side b',v:b},{k:'Side c',v:c}]}; },
+    hint: (d) => `Add all three sides: ${d.a} + ${d.b} + ${d.c} = ${d.a+d.b+d.c} units`,
+    draw: (ctx,d) => {
+      const pts=[{x:100,y:20},{x:20,y:160},{x:180,y:160}];
+      ctx.fillStyle='#0c1f12';
+      ctx.beginPath(); pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='#4ade80'; ctx.lineWidth=3;
+      ctx.beginPath(); pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.closePath(); ctx.stroke();
+      label(ctx,100,105,d.c+'','#4ade80'); label(ctx,54,88,d.a+'','#4ade80'); label(ctx,148,88,d.b+'','#4ade80');
+    }
+  },
+  {
+    name: 'Parallelogram', formula: 'P = 2(a + b)', color: '#fb923c', level: 2,
+    gen: () => { const a=rand(4,14),b=rand(3,10); return {dims:{a,b},answer:2*(a+b),dimsText:[{k:'Base (a)',v:a},{k:'Side (b)',v:b}]}; },
+    hint: (d) => `Opposite sides are equal. P = 2 × (${d.a} + ${d.b}) = 2 × ${d.a+d.b} = ${2*(d.a+d.b)} units`,
+    draw: (ctx,d) => {
+      const pts=[{x:70,y:30},{x:180,y:30},{x:150,y:150},{x:20,y:150}];
+      ctx.fillStyle='#1c1109';
+      ctx.beginPath(); pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='#fb923c'; ctx.lineWidth=3;
+      ctx.beginPath(); pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.closePath(); ctx.stroke();
+      label(ctx,125,18,d.a+'','#fb923c'); label(ctx,188,92,d.b+'','#fb923c');
+    }
+  },
+  {
+    name: 'Regular Hexagon', formula: 'P = 6s', color: '#f472b6', level: 3,
+    gen: () => { const s=rand(3,12); return {dims:{s},answer:6*s,dimsText:[{k:'Side (s)',v:s}]}; },
+    hint: (d) => `A regular hexagon has 6 equal sides. P = 6 × ${d.s} = ${6*d.s} units`,
+    draw: (ctx,d) => {
+      const cx=100,cy=90,r=65;
+      ctx.fillStyle='#1f0d17'; ctx.beginPath();
+      for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6; i===0?ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='#f472b6'; ctx.lineWidth=3; ctx.beginPath();
+      for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6; i===0?ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}
+      ctx.closePath(); ctx.stroke();
+      const a0=Math.PI/3*0-Math.PI/6,a1=Math.PI/3*1-Math.PI/6;
+      label(ctx,cx+(r*Math.cos(a0)+r*Math.cos(a1))/2+16,cy+(r*Math.sin(a0)+r*Math.sin(a1))/2,d.s+'','#f472b6');
+    }
+  }
+];
+
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function label(ctx,x,y,t,c){ctx.font='bold 13px "Space Mono",monospace';ctx.fillStyle=c;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,x,y);}
+
+let state={};
+
+function startGame(){
+  state={score:0,lives:3,level:1,streak:0,bestStreak:0,correct:0,xp:0,hintUsed:false,answered:false,timerID:null};
+  showScreen('game');
+  nextQuestion();
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id+'-screen').classList.add('active');
+}
+
+function getLevelShapes(){return SHAPES.filter(s=>s.level<=state.level);}
+function getTimerDuration(){return state.level===1?20000:state.level===2?16000:12000;}
+
+function nextQuestion(){
+  state.hintUsed=false; state.answered=false;
+  document.getElementById('hint-box').style.display='none';
+  document.getElementById('feedback').textContent='';
+  document.getElementById('feedback').className='feedback';
+  const pool=getLevelShapes();
+  const shape=pool[Math.floor(Math.random()*pool.length)];
+  const qData=shape.gen();
+  state.currentShape=shape; state.currentDims=qData.dims;
+  state.currentAnswer=qData.answer; state.currentHint=shape.hint(qData.dims);
+  updateHUD(); drawShape(shape,qData); buildOptions(qData.answer); startTimer();
+}
+
+function drawShape(shape,qData){
+  const canvas=document.getElementById('shapeCanvas');
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,200,180);
+  shape.draw(ctx,qData.dims);
+  document.getElementById('shape-name-label').textContent=shape.name;
+  document.getElementById('formula-badge').textContent=shape.formula;
+  document.getElementById('dims-list').innerHTML=qData.dimsText.map(d=>`<strong>${d.k}:</strong> ${d.v} units`).join('<br>');
+  document.getElementById('question-text').innerHTML=`What is the <em>perimeter</em> of this ${shape.name.toLowerCase()}?`;
+}
+
+function buildOptions(correct){
+  const opts=new Set([correct]);
+  const near=[correct-2,correct+2,correct-4,correct+4,correct+1,correct-1,correct*2,Math.max(1,correct-3)];
+  for(let n of near){if(n>0&&n!==correct)opts.add(n);if(opts.size>=4)break;}
+  while(opts.size<4){const r=correct+rand(-8,8);if(r>0&&r!==correct)opts.add(r);}
+  const arr=[...opts].slice(0,4).sort(()=>Math.random()-0.5);
+  const grid=document.getElementById('options-grid');
+  grid.innerHTML='';
+  arr.forEach(val=>{
+    const btn=document.createElement('button');
+    btn.className='option-btn'; btn.textContent=val+' units';
+    btn.onclick=()=>checkAnswer(val,btn);
+    grid.appendChild(btn);
+  });
+}
+
+function checkAnswer(val,btn){
+  if(state.answered)return;
+  state.answered=true;
+  clearInterval(state.timerID);
+  document.querySelectorAll('.option-btn').forEach(b=>b.disabled=true);
+  const correct=val===state.currentAnswer;
+  if(correct){
+    btn.classList.add('correct');
+    const pts=state.hintUsed?8:(state.streak>=3?20:state.streak>=2?15:10);
+    state.score+=pts; state.streak++; state.bestStreak=Math.max(state.bestStreak,state.streak); state.correct++; state.xp+=20;
+    if(state.xp>=100){state.xp=0;state.level=Math.min(3,state.level+1);levelUp();}
+    document.getElementById('feedback').textContent=correctMsg()+(state.hintUsed?'':` +${pts} pts`);
+    document.getElementById('feedback').className='feedback correct';
+    if(state.streak>=3)showCombo(state.streak+'x STREAK! 🔥');
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.option-btn').forEach(b=>{if(parseInt(b.textContent)===state.currentAnswer)b.classList.add('correct');});
+    state.lives--; state.streak=0;
+    document.getElementById('feedback').textContent=`Not quite! The answer was ${state.currentAnswer} units.`;
+    document.getElementById('feedback').className='feedback wrong';
+    if(state.lives<=0){setTimeout(gameOver,1200);return;}
+  }
+  updateHUD();
+  setTimeout(nextQuestion,1600);
+}
+
+function correctMsg(){const m=['Correct! ✓','Nice work! ✓','Spot on! ✓','Brilliant! ✓','Exactly right! ✓'];return m[Math.floor(Math.random()*m.length)];}
+
+function showCombo(msg){
+  const el=document.createElement('div');
+  el.className='combo-flash';el.textContent=msg;
+  document.body.appendChild(el);setTimeout(()=>el.remove(),900);
+}
+
+function levelUp(){
+  const labels=['','Level 2 — Triangles & Parallelograms','Level 3 — All Shapes!','Master Level!'];
+  document.getElementById('level-label').textContent=labels[state.level]||'Master Level!';
+  showCombo('LEVEL UP! ⬆️');
+}
+
+function startTimer(){
+  const dur=getTimerDuration();
+  const bar=document.getElementById('timer-bar');
+  let elapsed=0;
+  bar.style.width='100%'; bar.style.background='#38bdf8';
+  clearInterval(state.timerID);
+  state.timerID=setInterval(()=>{
+    elapsed+=100;
+    const pct=Math.max(0,100-(elapsed/dur*100));
+    bar.style.width=pct+'%';
+    bar.style.background=pct<30?'#ef4444':pct<60?'#fb923c':'#38bdf8';
+    if(elapsed>=dur&&!state.answered){
+      clearInterval(state.timerID); state.answered=true;
+      document.querySelectorAll('.option-btn').forEach(b=>b.disabled=true);
+      state.lives--; state.streak=0;
+      document.getElementById('feedback').textContent=`Time's up! Answer was ${state.currentAnswer} units.`;
+      document.getElementById('feedback').className='feedback wrong';
+      updateHUD();
+      if(state.lives<=0)setTimeout(gameOver,1200);
+      else setTimeout(nextQuestion,1600);
+    }
+  },100);
+}
+
+function showHint(){
+  state.hintUsed=true;
+  const hb=document.getElementById('hint-box');
+  hb.innerHTML=`<strong>💡 Hint:</strong> ${state.currentHint}`;
+  hb.style.display='block';
+}
+
+function updateHUD(){
+  document.getElementById('score-val').textContent=state.score;
+  document.getElementById('level-val').textContent=state.level;
+  document.getElementById('lives-val').textContent='❤️'.repeat(state.lives)||'💔';
+  document.getElementById('streak-val').textContent=state.streak+(state.streak>=3?'🔥':'');
+  document.getElementById('xp-bar').style.width=state.xp+'%';
+}
+
+function gameOver(){
+  clearInterval(state.timerID);
+  showScreen('gameover');
+  document.getElementById('go-title').textContent=state.lives<=0?'Game Over!':'Round Complete!';
+  document.getElementById('go-score-val').textContent=state.score;
+  document.getElementById('go-level').textContent=state.level;
+  document.getElementById('go-correct').textContent=state.correct;
+  document.getElementById('go-streak').textContent=state.bestStreak;
+  const msgs=[[0,5,"Keep practising — remember to add ALL the sides!"],[6,12,"Good effort! Review the formulas and try again."],[13,25,"Well done! You're getting the hang of perimeter."],[26,Infinity,"Outstanding! You're a perimeter pro! 🏆"]];
+  const msg=msgs.find(m=>state.correct>=m[0]&&state.correct<=m[1]);
+  document.getElementById('go-msg').textContent=msg?msg[2]:'';
+  const badges=[
+    {label:'First Step',earned:state.correct>=1},
+    {label:'On a Roll',earned:state.bestStreak>=3},
+    {label:'Level 2 Hero',earned:state.level>=2},
+    {label:'Perimeter Pro',earned:state.level>=3},
+    {label:'High Scorer',earned:state.score>=100},
+  ];
+  document.getElementById('badge-strip').innerHTML=badges.map(b=>`<div class="badge ${b.earned?'earned':''}">${b.earned?'🏅':''} ${b.label}</div>`).join('');
+}
+
+function shareGame(){
+  const url=window.location.href;
+  if(navigator.clipboard){navigator.clipboard.writeText(url).then(()=>alert('✅ Link copied to clipboard! Share it with your class.'));}
+  else{prompt('Copy this link to share:',url);}
+}
+
+showScreen('splash');
+</script>
+</body>
+</html>
